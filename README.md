@@ -3,10 +3,10 @@
 * Author: [Mark Croxton](http://hallmark-design.co.uk/)
 
 ## Version 1.0.0 
-## Note: this is still somewhat experimental
+#### Note: this is still somewhat experimental
 
 * Requires: [ExpressionEngine 2](http://expressionengine.com/)
-• [Playa](http://pixelandtonic.com/playa)
+* [Playa](http://pixelandtonic.com/playa)
 
 ## Description
 
