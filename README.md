@@ -20,9 +20,11 @@ Extends the Playa module to allow retrieval of parent/child relationships for mu
 ## Examples
 
 Get related entries which have ALL parents listed - use '&' as a delimiter
+
 	{exp:multiplaya:parents entry_id="20&31&73"}
 
 Get related entries which have ANY of the parents listed - use '|' as a delimiter
+
 	{exp:multiplaya:parents entry_id="20|31|73"}
 
 Also works with the other standalone Playa tags.
