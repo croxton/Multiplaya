@@ -10,7 +10,7 @@
 
 ## Description
 
-Extends the Playa module to allow retrieval of parent/child relationships for multiple entry ids.
+Extends the Playa module to allow retrieval of parent/child relationships for multiple entry ids. Specifically, you can add multiple entry ids to the entry_id parameter.
 
 ## Installation
 
@@ -19,7 +19,7 @@ Extends the Playa module to allow retrieval of parent/child relationships for mu
 
 ## Examples
 
-Get related entries which have ALL parents listed - use '&' as a delimiter
+Get related entries which have ALL the parents listed - use '&' as a delimiter
 
 	{exp:multiplaya:parents entry_id="20&31&73"}
 
@@ -27,5 +27,6 @@ Get related entries which have ANY of the parents listed - use '|' as a delimite
 
 	{exp:multiplaya:parents entry_id="20|31|73"}
 
-Also works with the other standalone Playa tags.
+
+Works in the same way with the other standalone Playa tags.
 
