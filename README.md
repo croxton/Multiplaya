@@ -12,6 +12,11 @@
 
 Extends the Playa module to allow retrieval of parent/child relationships for multiple entry ids.
 
+## Installation
+
+1. Copy the multiplaya folder to ./system/expressionengine/third_party/
+2. In the CP, navigate to Add-ons > Modules and click the 'Install' link for the Multiplaya module
+
 ## Examples
 
 Get related entries which have ALL parents listed - use '&' as a delimiter
