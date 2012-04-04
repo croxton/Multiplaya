@@ -5,13 +5,13 @@
  *
  * @package             Multiplaya
  * @author              Mark Croxton (mcroxton@hallmark-design.co.uk)
- * @copyright			Copyright (c) 2011 Hallmark Design
+ * @copyright			Copyright (c) 2012 Hallmark Design
  * @link                http://hallmark-design.co.uk
  */
 
 class Multiplaya_upd {
 
-	public $version = '1.0.0';
+	public $version = '1.0.1';
 	public $name 	= 'Multiplaya';
 	
 	/**

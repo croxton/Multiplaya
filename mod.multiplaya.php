@@ -5,7 +5,7 @@
  *
  * @package             Multiplaya
  * @author              Mark Croxton (mcroxton@hallmark-design.co.uk)
- * @copyright			Copyright (c) 2011 Hallmark Design
+ * @copyright			Copyright (c) 2012 Hallmark Design
  * @link                http://hallmark-design.co.uk
  */
 
@@ -21,13 +21,13 @@ if ( ! class_exists('Playa2'))
 }
 
 class Multiplaya extends Playa2
-{	
+{		
 	/**
 	 * Constructor
 	 */
 	function __construct()
 	{
-		parent::__construct();
+		parent::__construct();	
 	}
 	
 	/**
@@ -37,89 +37,156 @@ class Multiplaya extends Playa2
 	 * @param	string
 	 * @return	array
 	 */
-	protected function _fetch_rels($dir)
-	{
+protected function _fetch_rels($dir)
+	{		
 		// field, col, and row params
 		$field_ids = $this->_fetch_field_ids();
 		$col_ids   = $this->_fetch_col_ids();
 		$row_ids   = $this->_fetch_row_ids();
+		$sql_end = '';
+		
+		// get the list of entry IDs to include/exclude (if any)
+		$filter_ids = array(
+			'child'  => $this->EE->TMPL->fetch_param('child_id'),
+			'parent' => $this->EE->TMPL->fetch_param('parent_id')
+		);
 		
 		// assemble the requested entry ids
-		$entry_ids = array();
+		$multi_entry_ids = array();
 		
 		if (strpos($this->entry_id, '|') !== FALSE || strpos($this->entry_id, '&') !== FALSE)
 		{
-			$entry_ids = preg_split('/[\&\|]/', $this->entry_id, -1, PREG_SPLIT_NO_EMPTY);
-			$entry_ids = array_map('trim', array_map(array($this->EE->db, 'escape_str'), $entry_ids));
+			$multi_entry_ids = preg_split('/[\&\|]/', $this->entry_id, -1, PREG_SPLIT_NO_EMPTY);
+			$multi_entry_ids = array_map('trim', array_map(array($this->EE->db, 'escape_str'), $multi_entry_ids));
 		}
 		
 		// create a unique cache key
-		$cache_key_id = count($entry_ids) > 0 ? implode(',', $entry_ids) : $this->entry_id;
+		$cache_key_id = count($multi_entry_ids) > 0 ? implode(',', $multi_entry_ids) : $this->entry_id;
 
 		$cache_key = $cache_key_id . '|'
 		           . $dir . '|'
-		           . ($field_ids ? implode(',', $field_ids) : '*') . '|'
-		           . ($col_ids   ? implode(',', $col_ids)   : '*') . '|'
-		           . ($row_ids   ? implode(',', $row_ids)   : '*');
-
+		           . ($field_ids   ? implode(',', $field_ids) : '*') . '|'
+		           . ($col_ids     ? implode(',', $col_ids)   : '*') . '|'
+		           . ($row_ids     ? implode(',', $row_ids)   : '*') . '|'
+		           . ($filter_ids['child']  ? str_replace('|', ',', $filter_ids['child']) : '*')
+		           . ($filter_ids['parent'] ? str_replace('|', ',', $filter_ids['parent']) : '*');
+			
 		// find the rels if they aren't already cached
 		if (! isset($this->cache['rels'][$cache_key]))
-		{	
-			if ($dir == 'children')
+		{		
+			switch($dir)
 			{
-				$this->helper->db_where('parent_entry_id', (count($entry_ids) > 0 ? $entry_ids : $this->entry_id) );
-				
-				// AND type filtering 
-				// => entries must have relationships with ALL specified parent/child entry ids
-				if (strpos($this->entry_id, '&') !== FALSE)
-				{	
-					$this->EE->db->having('COUNT(parent_entry_id)', count($entry_ids)); 
-					$this->EE->db->group_by("child_entry_id"); 
-				}
+				case 'children':
 
-				// order
-				$this->EE->db->order_by('rel_order');
-			}
-			else
-			{
-				$this->helper->db_where('child_entry_id', (count($entry_ids) > 0 ? $entry_ids : $this->entry_id) );
-				
-				// AND type filtering 
-				// => entries must have relationships with ALL specified parent/child entry ids
-				if (strpos($this->entry_id, '&') !== FALSE)
-				{	
-					$this->EE->db->having('COUNT(child_entry_id)', count($entry_ids)); 
-					$this->EE->db->group_by("parent_entry_id"); 
-				}
+					$sql = 'SELECT DISTINCT(rel.child_entry_id) AS entry_id
+					        FROM exp_playa_relationships rel';
+					
+					if (count($multi_entry_ids) > 0)
+					{
+						$where[] = 'rel.parent_entry_id IN ('.implode(",", $multi_entry_ids).')';
+					}
+					else
+					{
+						$where[] = 'rel.parent_entry_id = '.$this->entry_id;
+					}
+					
+					// AND type filtering 
+					// => entries must have relationships with ALL specified parent/child entry ids
+					if (strpos($this->entry_id, '&') !== FALSE)
+					{	
+						$sql_end = 'GROUP BY rel.child_entry_id
+									HAVING COUNT(rel.parent_entry_id) = '.count($multi_entry_ids).' ';
+					}
+					
+					$sql_end .= 'ORDER BY rel.rel_order';
+					
+					break;
+
+				case 'parents':
+
+					$sql = 'SELECT DISTINCT(rel.parent_entry_id) AS entry_id
+					        FROM exp_playa_relationships rel';
+					
+					if (count($multi_entry_ids) > 0)
+					{	
+						$where[] = 'rel.child_entry_id IN ('.implode(",", $multi_entry_ids).')';
+					}
+					else
+					{
+						$where[] = 'rel.child_entry_id = '.$this->entry_id;
+					}
+					
+					// AND type filtering 
+					// => entries must have relationships with ALL specified parent/child entry ids
+					if (strpos($this->entry_id, '&') !== FALSE)
+					{	
+						$sql_end = 'GROUP BY rel.parent_entry_id
+									HAVING COUNT(rel.child_entry_id) = '.count($multi_entry_ids);
+					}
+					
+					break;
+
+				case 'siblings';
+
+					$sql = "SELECT DISTINCT(rel.child_entry_id) AS entry_id
+					        FROM exp_playa_relationships rel
+					        INNER JOIN exp_playa_relationships parent ON parent.parent_entry_id = rel.parent_entry_id";
+					break;
 			}
 			
 			// filter by field?
 			if ($field_ids)
 			{
-				$this->helper->db_where('parent_field_id', $field_ids);
+				$where[] = 'rel.parent_field_id IN ('.implode(',', $field_ids).')';
 			}
 
 			// filter by column?
 			if ($col_ids)
 			{
-				$this->helper->db_where('parent_col_id', $col_ids);
+				$where[] = 'rel.parent_col_id IN ('.implode(',', $col_ids).')';
 			}
 
 			// filter by row?
 			if ($row_ids)
 			{
-				$this->helper->db_where('parent_row_id', $row_ids);
+				$where[] = 'rel.parent_row_id IN ('.implode(',', $row_ids).')';
+			}
+
+			// filter by entry ID?
+			foreach ($filter_ids as $col => $entry_ids)
+			{
+				if ($entry_ids)
+				{
+					$entry_ids = str_replace('|', ',', $entry_ids);
+
+					if ($not = (strncmp($entry_ids, 'not ', 4) == 0))
+					{
+						$entry_ids = substr($entry_ids, 4);
+					}
+
+					$where[] = "rel.{$col}_entry_id".($not ? ' NOT' : '').' IN ('.$entry_ids.')';
+				}
+			}
+
+			if (isset($where))
+			{
+				$sql .= ' WHERE '.implode(' AND ', $where);
+			}
+
+			if (!empty($sql_end))
+			{
+				$sql .= ' '.$sql_end;
 			}
 
 			// get the relationships
-			$rels = $this->EE->db->get('playa_relationships');
+			$rels = $this->EE->db->query($sql);
 
-			// cache them
+			// cache them in case an identical request comes later
 			$this->cache['rels'][$cache_key] = $rels;
 		}
 
 		return $this->cache['rels'][$cache_key];
-	}	
+	}
 }
 
 /* End of file mod.multiplaya.php */
